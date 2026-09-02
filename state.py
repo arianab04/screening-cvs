@@ -10,3 +10,4 @@ class AgentState(MessagesState):
     validation: str
     next_agent: str
     task_completed: bool
+    human_approved: bool

@@ -1,45 +1,48 @@
 # Orquestador Multi-Agente de RRHH
 
-Prototipo funcional de un sistema multi-agente para asistir en el
-screening de candidatos para una posición de Data Analyst.
+API de screening automatizado de CVs mediante un orquestador multi-agente construido con LangGraph.
 
-El sistema utiliza LangGraph para coordinar un Supervisor y dos
-agentes especialistas:
+El sistema recibe una tarea de screening, la coloca en una cola Redis y la procesa mediante varios agentes:
 
-- Research Agent: búsqueda de candidatos.
-- Analyst Agent: cálculo y análisis de candidatos.
-- Validation: verificación del resultado antes de finalizar.
-
----
-
-## Objetivo
-
-Construir un orquestador multi-agente capaz de recibir una solicitud
-de selección de personal, delegar la tarea entre distintos agentes
-especializados y generar una recomendación final validada.
-
-El caso de prueba utilizado es la selección del candidato más adecuado
-para una posición de Data Analyst.
-
----
+- Research Agent: obtiene los candidatos disponibles.
+- Analyst Agent: calcula los puntajes de los candidatos.
+- Validation: verifica que el análisis contenga la información necesaria.
+- Human-in-the-Loop: solicita aprobación humana antes de finalizar.
+- LangSmith: registra trazas de la ejecución.
+- RedisSaver: persiste el estado del grafo.
 
 ## Arquitectura
 
-La arquitectura utiliza una topología jerárquica.
-
-El Supervisor funciona como router central y decide qué nodo debe
-ejecutarse en cada etapa del proceso.
-
 ```mermaid
 flowchart TD
+    CLIENT[Cliente / Swagger]
+    API[FastAPI]
+    QUEUE[Redis Queue]
+    WORKER[Worker]
+    GRAPH[LangGraph]
+    SUP[Supervisor]
+    RESEARCH[Research Agent]
+    ANALYST[Analyst Agent]
+    VALIDATION[Validation]
+    APPROVAL[Human Approval]
+    REDIS[RedisSaver]
+    LANGSMITH[LangSmith]
 
-    START --> Supervisor
+    CLIENT --> API
+    API --> QUEUE
+    QUEUE --> WORKER
+    WORKER --> GRAPH
 
-    Supervisor -->|research| Research
-    Supervisor -->|analyst| Analyst
-    Supervisor -->|validation| Validation
-    Supervisor -->|end| END
+    GRAPH --> SUP
+    SUP --> RESEARCH
+    RESEARCH --> SUP
+    SUP --> ANALYST
+    ANALYST --> SUP
+    SUP --> VALIDATION
+    VALIDATION --> SUP
+    SUP --> APPROVAL
+    APPROVAL --> SUP
+    SUP --> END
 
-    Research --> Supervisor
-    Analyst --> Supervisor
-    Validation --> Supervisor
+    GRAPH <--> REDIS
+    GRAPH --> LANGSMITH
