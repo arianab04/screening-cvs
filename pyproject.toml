@@ -1,0 +1,17 @@
+[project]
+name = "screening-cvs"
+version = "2.0.0"
+description = "Sistema multi-agente de screening de CVs: RAG + LangGraph (supervisor) + FastAPI + observabilidad"
+readme = "README.md"
+requires-python = ">=3.12"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.setuptools.packages.find]
+include = ["app*", "scripts*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

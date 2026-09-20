@@ -1,0 +1,44 @@
+services:
+  redis:
+    image: redis/redis-stack:latest # incluye RediSearch/RedisJSON (requeridos por el checkpointer) y RedisInsight en :8001
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  ingest:
+    # Indexa los CVs en Pinecone (idempotente). El worker espera a que termine.
+    build: .
+    command: python -m scripts.ingest_cvs
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379
+    restart: "no"
+
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: python -m app.worker
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      ingest:
+        condition: service_completed_successfully
